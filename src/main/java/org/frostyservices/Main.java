@@ -20,7 +20,6 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
 import org.frostyservices.Configurations.Configurations;
 import org.frostyservices.SQL.SQL;
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -188,15 +187,7 @@ public class Main extends ListenerAdapter {
 
     public static void initConfigurations() {
         configurations = new Configurations();
-
-        try {
-            configurations.loadConfig();
-        } catch (IOException e) {
-            System.err.println("Error loading the configuration: " + e.getMessage());
-
-            configurations.setToken("Token");
-
-            e.printStackTrace();
-        }
+        configurations.saveConfig();
+        configurations.loadConfig();
     }
 }
