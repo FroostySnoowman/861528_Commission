@@ -1,137 +1,73 @@
 package org.frostyservices.Configurations;
 
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.Yaml;
+import com.esotericsoftware.yamlbeans.YamlException;
+import com.esotericsoftware.yamlbeans.YamlReader;
+import org.frostyservices.Main;
+import org.frostyservices.Utils.FileUtils;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class Configurations {
-    private static final String CONFIG_FILE_NAME = "config.yml";
+    public static FileUtils fileUtils = new FileUtils();
 
-    private String token_placeholder = "TOKEN_HERE";
-    private String hostname_placeholder = "HOSTNAME_HERE";
-    private String password_placeholder = "PASSWORD_HERE";
-    private String database_placeholder = "DATABASE_HERE";
-    private String username_placeholder = "USERNAME_HERE";
-    private Integer port_placeholder = 3306;
+    public static void init() {
+        if (!fileUtils.checkFileExist("config.yml")) {
 
-    private String token;
-    private String hostname;
-    private Integer port;
-    private String database;
-    private String username;
-    private String password;
-
-    public String getToken() {
-        return this.token;
+            Main.logger.info("Creating default configuration file...");
+            createConfigFile();
+            Main.logger.info("Created!");
+        } else {
+            Main.logger.info("Configuration file has already been created!");
+        }
     }
 
-    public void setToken(String token) {
-        this.token = token;
-    }
+    public static void createConfigFile() {
+        if (!fileUtils.checkFileExist("config.yml")) {
 
-    public String getHostname() {
-        return this.hostname;
-    }
+            fileUtils.createFile("config.yml");
 
-    public void setHostname(String hostname) {
-        this.hostname = hostname;
-    }
+            InputStream is = Configurations.class.getClassLoader().getResourceAsStream("config.yml");
 
-    public Integer getPort() {
-        return this.port;
-    }
-
-    public void setPort(Integer port) {
-        this.port = port;
-    }
-
-    public String getDatabase() {
-        return this.database;
-    }
-
-    public void setDatabase(String database) {
-        this.database = database;
-    }
-
-    public String getUsername() {
-        return this.username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return this.password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public void loadConfig() {
-        ClassLoader classLoader = getClass().getClassLoader();
-        InputStream inputStream = classLoader.getResourceAsStream(CONFIG_FILE_NAME);
-
-        try {
-            if (inputStream != null) {
-                try (InputStreamReader reader = new InputStreamReader(inputStream)) {
-                    Yaml yaml = new Yaml();
-                    Map<String, Object> data = yaml.load(reader);
-
-                    if (data != null) {
-                        this.token = (String) data.get("Token");
-                        this.hostname = (String) data.get("MySQL.Hostname");
-                        this.port = (Integer) data.get("MySQL.Port");
-                        this.database = (String) data.get("MySQL.Database");
-                        this.username = (String) data.get("MySQL.Username");
-                        this.password = (String) data.get("MySQL.Password");
-                    } else {
-                        throw new IOException("Invalid configuration file.");
+            try (InputStreamReader streamReader = new InputStreamReader(is, StandardCharsets.UTF_8);
+                 BufferedReader reader = new BufferedReader(streamReader)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    try(PrintWriter output = new PrintWriter(new FileWriter("config.yml",true))) {
+                        output.printf("%s\r\n", line);
                     }
                 }
-            } else {
-                throw new IOException("Configuration file does not exist.");
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
-        this.token = (this.token != null) ? this.token : token_placeholder;
-        this.hostname = (this.hostname != null) ? this.hostname : hostname_placeholder;
-        this.port = (this.port != null) ? this.port : port_placeholder;
-        this.database = (this.database != null) ? this.database : database_placeholder;
-        this.username = (this.username != null) ? this.username : username_placeholder;
-        this.password = (this.password != null) ? this.password : password_placeholder;
+            if (fileUtils.checkFileExist("config.yml")) {
+                Main.logger.severe("Default config file created, please check config and run app again!");
+                System.exit(0);
+            } else {
+                Main.logger.severe("Error creating default config, try reinstalling the application or check the config!");
+                System.exit(0);
+            }
+        }
     }
 
-    public void saveConfig() {
-        File configFile = new File(CONFIG_FILE_NAME);
+    public static String getConfigValue(String value) {
 
-        // Check if the file exists and has content
-        if (configFile.exists() && configFile.length() > 0) {
-            System.out.println("Configuration file already contains data. Skipping save.");
-            return;
-        }
-
-        try (FileWriter writer = new FileWriter(configFile)) {
-            String yamlContent = "Token: \"" + token_placeholder + "\"\n" +
-                    "\n" +
-                    "MySQL:\n" +
-                    "   Hostname: \"" + hostname_placeholder + "\"\n" +
-                    "   Password: \"" + password_placeholder + "\"\n" +
-                    "   Database: \"" + database_placeholder + "\"\n" +
-                    "   Username: \"" + username_placeholder + "\"\n" +
-                    "   Port: " + port_placeholder;
-
-            writer.write(yamlContent);
-            System.out.println("Configuration file saved successfully.");
-        } catch (IOException e) {
+        YamlReader reader = null;
+        try {
+            reader = new YamlReader(new FileReader("config.yml"));
+        } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+        Object object = null;
+        try {
+            object = reader.read();
+        } catch (YamlException e) {
+            e.printStackTrace();
+        }
+        Map map = (Map)object;
+
+        return (String) map.get(value);
     }
 }

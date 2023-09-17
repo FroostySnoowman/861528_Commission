@@ -32,11 +32,11 @@ public class Main extends ListenerAdapter {
 
     public static void main(String[] args) {
 
+        Configurations.init();
+
         instance = new Main();
 
-        initConfigurations();
-
-        String token = Main.configurations.getToken();
+        String token = Configurations.getConfigValue("Token");
 
         JDA jda = JDABuilder.createLight(token)
                 .addEventListeners(new Main())
@@ -183,11 +183,5 @@ public class Main extends ListenerAdapter {
                         Button.secondary(userId + ":delete", "Nevermind!"),
                         Button.danger(userId + ":prune:" + amount, "Yes!")) // the first parameter is the component id we use in onButtonInteraction above
                 .queue();
-    }
-
-    public static void initConfigurations() {
-        configurations = new Configurations();
-        configurations.saveConfig();
-        configurations.loadConfig();
     }
 }

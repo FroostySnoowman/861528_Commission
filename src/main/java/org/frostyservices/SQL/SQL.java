@@ -19,11 +19,11 @@ public class SQL {
 
     public void Connect() {
         try {
-            String hostname = Main.configurations.getHostname();
-            Integer port = Main.configurations.getPort();
-            String database = Main.configurations.getDatabase();
-            String username = Main.configurations.getUsername();
-            String password = Main.configurations.getPassword();
+            String hostname = Main.configurations.getConfigValue("MySQL_Hostname");
+            Integer port = Integer.valueOf(Main.configurations.getConfigValue("MySQL_Port"));
+            String database = Main.configurations.getConfigValue("MySQL_Database");
+            String username = Main.configurations.getConfigValue("MySQL_Username");
+            String password = Main.configurations.getConfigValue("MySQL_Password");
             this.poolSource = new MysqlConnectionPoolDataSource();
             this.poolSource
                     .setURL(

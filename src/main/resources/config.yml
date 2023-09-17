@@ -1,8 +1,7 @@
 Token: ""
 
-MySQL:
-    Hostname: ""
-    Port: 3306
-    Database: ""
-    Username: ""
-    Password: ""
+MySQL_Hostname: ""
+MySQL_Port: 3306
+MySQL_Database: ""
+MySQL_Username: ""
+MySQL_Password: ""
