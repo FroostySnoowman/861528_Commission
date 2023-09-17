@@ -2,9 +2,8 @@ package org.frostyservices.SQL;
 
 import org.frostyservices.Main;
 import com.mysql.cj.jdbc.MysqlConnectionPoolDataSource;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
+
+import java.sql.*;
 import javax.sql.PooledConnection;
 
 
@@ -90,5 +89,44 @@ public class SQL {
             var7.printStackTrace();
             Main.logger.severe("DB Schema creation failed: " + var7.getMessage());
         }
+    }
+
+    public String getLeaderboard() {
+        Main.logger.info("Here 1");
+        StringBuilder leaderboardMessage = new StringBuilder();
+
+        Main.logger.info("Here 2");
+        try {
+            try (Connection con = this.connectionPool.getConnection()) {
+                Main.logger.info("Here 3");
+                PreparedStatement pstmt = con.prepareStatement("SELECT * FROM stats ORDER BY Earnings DESC");
+                ResultSet rs = pstmt.executeQuery();
+
+                Main.logger.info("Here 4");
+                int rank = 1;
+
+                Main.logger.info("Here 5");
+                while (rs.next() && rank <= 10) {
+                    String discordID = rs.getString("DiscordID");
+                    String earnings = rs.getString("Earnings");
+
+                    Main.logger.info("Here 6");
+                    leaderboardMessage.append(rank).append(". ").append(discordID).append(" - ").append(earnings).append("\n");
+
+                    Main.logger.info("Here 7");
+                    rank++;
+                }
+
+                Main.logger.info("Here 8");
+                pstmt.close();
+                rs.close();
+            }
+        } catch (SQLException var9) {
+            Main.logger.severe("Failed to get the leaderboard");
+        }
+
+        Main.logger.info("Here 9");
+        Main.logger.info(leaderboardMessage.toString());
+        return leaderboardMessage.toString();
     }
 }

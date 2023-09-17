@@ -48,12 +48,12 @@ public class Main extends ListenerAdapter {
 
         // Leaderboard Command
         commands.addCommands(
-                Commands.slash("leaderboard", "Makes the bot say what you tell it to")
+                Commands.slash("leaderboard", "Shows you the highest earned members!")
         );
 
         // Clockout Command
         commands.addCommands(
-                Commands.slash("clockout", "Make the bot leave the server")
+                Commands.slash("clockout", "Clocks out a specific member!")
                         .addOptions(new OptionData(USER, "user", "The user to clockout!")
                                 .setRequired(true))
                         .setGuildOnly(true)
@@ -61,7 +61,7 @@ public class Main extends ListenerAdapter {
 
         // Stats Command
         commands.addCommands(
-                Commands.slash("stats", "Shows a user's total time elapsed & earnings.")
+                Commands.slash("stats", "Shows a user's total time elapsed & earnings!")
                         .addOptions(new OptionData(USER, "user", "Who's stats should I display?")
                                 .setRequired(true))
                         .setGuildOnly(true)
@@ -77,7 +77,6 @@ public class Main extends ListenerAdapter {
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        // Only accept commands from guilds
         if (event.getGuild() == null)
             return;
         switch (event.getName()) {
@@ -87,6 +86,7 @@ public class Main extends ListenerAdapter {
                 ban(event, user, member);
                 break;
             case "leaderboard":
+                Main.logger.info("Here 10");
                 leaderboard(event);
                 break;
             case "leave":
@@ -160,7 +160,11 @@ public class Main extends ListenerAdapter {
     }
 
     public void leaderboard(SlashCommandInteractionEvent event) {
-        event.reply("Test").queue();
+        Main.logger.info("Here 11");
+        String leaderboard = instance.sql.getLeaderboard();
+        Main.logger.info("Here 12");
+        event.reply(leaderboard).queue();
+        Main.logger.info("Here 13");
     }
 
     public void leave(SlashCommandInteractionEvent event) {
