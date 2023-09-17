@@ -2,10 +2,8 @@ package org.frostyservices.Configurations;
 
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+
+import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -68,24 +66,30 @@ public class Configurations {
     }
 
     public void loadConfig() throws IOException {
-        File configFile = new File(CONFIG_FILE_NAME);
+        ClassLoader classLoader = getClass().getClassLoader();
+        InputStream inputStream = classLoader.getResourceAsStream(CONFIG_FILE_NAME);
 
-        if (configFile.exists()) {
-            try (FileReader reader = new FileReader(configFile)) {
+        if (inputStream != null) {
+            try (InputStreamReader reader = new InputStreamReader(inputStream)) {
                 Yaml yaml = new Yaml();
                 Map<String, Object> data = yaml.load(reader);
 
-                this.token = (String) data.get("Token");
-                this.hostname = (String) data.get("MySQL.Hostname");
-                this.port = (Integer) data.get("MySQL.Port");
-                this.database = (String) data.get("MySQL.Database");
-                this.username = (String) data.get("MySQL.Username");
-                this.password = (String) data.get("MySQL.Password");
+                if (data != null) {
+                    this.token = (String) data.get("Token");
+                    this.hostname = (String) data.get("MySQL.Hostname");
+                    this.port = (Integer) data.get("MySQL.Port");
+                    this.database = (String) data.get("MySQL.Database");
+                    this.username = (String) data.get("MySQL.Username");
+                    this.password = (String) data.get("MySQL.Password");
+                } else {
+                    throw new IOException("Invalid configuration file.");
+                }
             }
         } else {
             throw new IOException("Configuration file does not exist.");
         }
     }
+
 
     public void saveConfig() throws IOException {
         File configFile = new File(CONFIG_FILE_NAME);
@@ -97,9 +101,15 @@ public class Configurations {
         try (FileWriter writer = new FileWriter(configFile)) {
             Map<String, Object> data = new HashMap<>();
             data.put("Token", this.token);
+            data.put("MySQL.Hostname", this.hostname);
+            data.put("MySQL.Port", this.port);
+            data.put("MySQL.Database", this.database);
+            data.put("MySQL.Username", this.username);
+            data.put("MySQL.Password", this.password);
 
             yaml.dump(data, writer);
         }
     }
+
 }
 

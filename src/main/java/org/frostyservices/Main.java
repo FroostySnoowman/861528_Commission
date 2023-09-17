@@ -27,6 +27,7 @@ import java.util.logging.Logger;
 public class Main extends ListenerAdapter {
     private static Main instance;
     public SQL sql;
+    public JDA jda;
     public static Configurations configurations;
     public static final Logger logger = Logger.getLogger(Main.class.getName());
 
