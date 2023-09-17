@@ -30,10 +30,9 @@ public class Main extends ListenerAdapter {
     public static Configurations configurations;
     public static final Logger logger = Logger.getLogger(Main.class.getName());
 
-    public void main(String[] args) {
+    public static void main(String[] args) {
 
-        // Adds "this" for "this.main" to work
-        if (instance == null) instance = this;
+        instance = new Main();
 
         initConfigurations();
 
@@ -71,8 +70,8 @@ public class Main extends ListenerAdapter {
         commands.queue();
 
         // SQL Setup
-        this.sql = new SQL(this);
-        this.sql.Connect();
+        SQL sql = new SQL(instance);
+        sql.Connect();
     }
 
 
