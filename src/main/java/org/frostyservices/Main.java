@@ -4,6 +4,7 @@ import static net.dv8tion.jda.api.interactions.commands.OptionType.*;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
@@ -11,79 +12,83 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
-import java.util.EnumSet;
+import org.frostyservices.Configurations.Configurations;
+import org.frostyservices.SQL.SQL;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
-public class Main extends ListenerAdapter
-{
-    public static void main(String[] args)
-    {
-        JDA jda = JDABuilder.createLight("MTE1MjcxNDY3ODkwMDg4NzY1NA.G3qpvr.biafJyZ3EX2EEaWub3AOmgZXCUw_GMtqCGDFt4", EnumSet.noneOf(GatewayIntent.class)) // slash commands don't need any intents
+public class Main extends ListenerAdapter {
+    private static Main instance;
+    public SQL sql;
+    public static Configurations configurations;
+    public static final Logger logger = Logger.getLogger(Main.class.getName());
+
+    public void main(String[] args) {
+
+        // Adds "this" for "this.main" to work
+        if (instance == null) instance = this;
+
+        initConfigurations();
+
+        String token = Main.configurations.getToken();
+
+        JDA jda = JDABuilder.createLight(token)
                 .addEventListeners(new Main())
+                .enableIntents(GatewayIntent.getIntents(GatewayIntent.ALL_INTENTS))
+                .setActivity(Activity.playing("Development"))
                 .build();
 
-        // These commands might take a few minutes to be active after creation/update/delete
         CommandListUpdateAction commands = jda.updateCommands();
 
-        // Moderation commands with required options
+        // Leaderboard Command
         commands.addCommands(
-                Commands.slash("ban", "Ban a user from this server. Requires permission to ban users.")
-                        .addOptions(new OptionData(USER, "user", "The user to ban") // USER type allows to include members of the server or other users by id
-                                .setRequired(true)) // This command requires a parameter
-                        .addOptions(new OptionData(INTEGER, "del_days", "Delete messages from the past days.") // This is optional
-                                .setRequiredRange(0, 7)) // Only allow values between 0 and 7 (inclusive)
-                        .addOptions(new OptionData(STRING, "reason", "The ban reason to use (default: Banned by <user>)")) // optional reason
-                        .setGuildOnly(true) // This way the command can only be executed from a guild, and not the DMs
-                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.BAN_MEMBERS)) // Only members with the BAN_MEMBERS permission are going to see this command
+                Commands.slash("leaderboard", "Makes the bot say what you tell it to")
         );
 
-        // Simple reply commands
+        // Clockout Command
         commands.addCommands(
-                Commands.slash("say", "Makes the bot say what you tell it to")
-                        .addOption(STRING, "content", "What the bot should say", true) // you can add required options like this too
-        );
-
-        // Commands without any inputs
-        commands.addCommands(
-                Commands.slash("leave", "Make the bot leave the server")
-                        .setGuildOnly(true) // this doesn't make sense in DMs
-                        .setDefaultPermissions(DefaultMemberPermissions.DISABLED) // only admins should be able to use this command.
-        );
-
-        commands.addCommands(
-                Commands.slash("prune", "Prune messages from this channel")
-                        .addOption(INTEGER, "amount", "How many messages to prune (Default 100)") // simple optional argument
+                Commands.slash("clockout", "Make the bot leave the server")
+                        .addOptions(new OptionData(USER, "user", "The user to clockout!")
+                                .setRequired(true))
                         .setGuildOnly(true)
-                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
         );
 
-        // Send the new set of commands to discord, this will override any existing global commands with the new set provided here
+        // Stats Command
+        commands.addCommands(
+                Commands.slash("stats", "Shows a user's total time elapsed & earnings.")
+                        .addOptions(new OptionData(USER, "user", "Who's stats should I display?")
+                                .setRequired(true))
+                        .setGuildOnly(true)
+        );
+
         commands.queue();
+
+        // SQL Setup
+        this.sql = new SQL(this);
+        this.sql.Connect();
     }
 
 
     @Override
-    public void onSlashCommandInteraction(SlashCommandInteractionEvent event)
-    {
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         // Only accept commands from guilds
         if (event.getGuild() == null)
             return;
-        switch (event.getName())
-        {
+        switch (event.getName()) {
             case "ban":
-                Member member = event.getOption("user").getAsMember(); // the "user" option is required, so it doesn't need a null-check here
+                Member member = event.getOption("user").getAsMember();
                 User user = event.getOption("user").getAsUser();
                 ban(event, user, member);
                 break;
-            case "say":
-                say(event, event.getOption("content").getAsString()); // content is required so no null-check here
+            case "leaderboard":
+                leaderboard(event);
                 break;
             case "leave":
                 leave(event);
@@ -97,8 +102,7 @@ public class Main extends ListenerAdapter
     }
 
     @Override
-    public void onButtonInteraction(ButtonInteractionEvent event)
-    {
+    public void onButtonInteraction(ButtonInteractionEvent event) {
         String[] id = event.getComponentId().split(":"); // this is the custom id we specified in our button
         String authorId = id[0];
         String type = id[1];
@@ -108,8 +112,7 @@ public class Main extends ListenerAdapter
         event.deferEdit().queue(); // acknowledge the button was clicked, otherwise the interaction will fail
 
         MessageChannel channel = event.getChannel();
-        switch (type)
-        {
+        switch (type) {
             case "prune":
                 int amount = Integer.parseInt(id[2]);
                 event.getChannel().getIterableHistory()
@@ -122,26 +125,22 @@ public class Main extends ListenerAdapter
         }
     }
 
-    public void ban(SlashCommandInteractionEvent event, User user, Member member)
-    {
+    public void ban(SlashCommandInteractionEvent event, User user, Member member) {
         event.deferReply(true).queue(); // Let the user know we received the command before doing anything else
         InteractionHook hook = event.getHook(); // This is a special webhook that allows you to send messages without having permissions in the channel and also allows ephemeral messages
         hook.setEphemeral(true); // All messages here will now be ephemeral implicitly
-        if (!event.getMember().hasPermission(Permission.BAN_MEMBERS))
-        {
+        if (!event.getMember().hasPermission(Permission.BAN_MEMBERS)) {
             hook.sendMessage("You do not have the required permissions to ban users from this server.").queue();
             return;
         }
 
         Member selfMember = event.getGuild().getSelfMember();
-        if (!selfMember.hasPermission(Permission.BAN_MEMBERS))
-        {
+        if (!selfMember.hasPermission(Permission.BAN_MEMBERS)) {
             hook.sendMessage("I don't have the required permissions to ban users from this server.").queue();
             return;
         }
 
-        if (member != null && !selfMember.canInteract(member))
-        {
+        if (member != null && !selfMember.canInteract(member)) {
             hook.sendMessage("This user is too powerful for me to ban.").queue();
             return;
         }
@@ -161,13 +160,11 @@ public class Main extends ListenerAdapter
                 .queue(); // execute the entire call chain
     }
 
-    public void say(SlashCommandInteractionEvent event, String content)
-    {
-        event.reply(content).queue(); // This requires no permissions!
+    public void leaderboard(SlashCommandInteractionEvent event) {
+        event.reply("Test").queue();
     }
 
-    public void leave(SlashCommandInteractionEvent event)
-    {
+    public void leave(SlashCommandInteractionEvent event) {
         if (!event.getMember().hasPermission(Permission.KICK_MEMBERS))
             event.reply("You do not have permissions to kick me.").setEphemeral(true).queue();
         else
@@ -176,8 +173,7 @@ public class Main extends ListenerAdapter
                     .queue();
     }
 
-    public void prune(SlashCommandInteractionEvent event)
-    {
+    public void prune(SlashCommandInteractionEvent event) {
         OptionMapping amountOption = event.getOption("amount"); // This is configured to be optional so check for null
         int amount = amountOption == null
                 ? 100 // default 100
@@ -188,5 +184,19 @@ public class Main extends ListenerAdapter
                         Button.secondary(userId + ":delete", "Nevermind!"),
                         Button.danger(userId + ":prune:" + amount, "Yes!")) // the first parameter is the component id we use in onButtonInteraction above
                 .queue();
+    }
+
+    public static void initConfigurations() {
+        configurations = new Configurations();
+
+        try {
+            configurations.loadConfig();
+        } catch (IOException e) {
+            System.err.println("Error loading the configuration: " + e.getMessage());
+
+            configurations.setToken("Token");
+
+            e.printStackTrace();
+        }
     }
 }
